@@ -1,6 +1,6 @@
 {
   "name": "plugin-gblin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ElizaOS plugin — gasless treasury rail for AI agents on Base mainnet. Routes idle USDC into the GBLIN MEV-protected cbBTC/WETH basket and JIT-swaps back to USDC for x402 invoices.",
   "type": "module",
   "main": "dist/index.js",
@@ -36,11 +36,11 @@
   "license": "MIT",
   "homepage": "https://gblin.digital/agents",
   "bugs": {
-    "url": "https://github.com/gblinproject/GBLIN-MCP/issues"
+    "url": "https://github.com/gblinproject/GBLIN_PLUGIN/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gblinproject/GBLIN-MCP.git"
+    "url": "git+https://github.com/gblinproject/GBLIN_PLUGIN.git"
   },
   "publishConfig": {
     "access": "public"
