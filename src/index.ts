@@ -33,42 +33,20 @@ import {
 import {
   createPublicClient,
   createWalletClient,
-  encodeAbiParameters,
   http,
-  parseAbiParameters,
-  parseUnits,
   type Address,
   type Hex,
 } from "viem";
 import { base } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import { x402Client } from "@x402/core/client";
+import { registerExactEvmScheme } from "@x402/evm/exact/client";
+import { wrapFetchWithPayment } from "@x402/fetch";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const DEFAULT_BASE_URL = "https://gblin.digital";
 const DEFAULT_RPC_URL = "https://base-rpc.publicnode.com";
-
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
-const USDC_DECIMALS = 6;
-
-// x402 v2 EIP-3009 domain for USDC on Base mainnet
-const USDC_DOMAIN = {
-  name: "USD Coin",
-  version: "2",
-  chainId: 8453,
-  verifyingContract: USDC_ADDRESS,
-} as const;
-
-const TRANSFER_WITH_AUTH_TYPES = {
-  TransferWithAuthorization: [
-    { name: "from", type: "address" },
-    { name: "to", type: "address" },
-    { name: "value", type: "uint256" },
-    { name: "validAfter", type: "uint256" },
-    { name: "validBefore", type: "uint256" },
-    { name: "nonce", type: "bytes32" },
-  ],
-} as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,69 +80,21 @@ function getConfig(runtime: IAgentRuntime) {
 }
 
 /**
- * Build x402 PAYMENT-SIGNATURE header for a given endpoint price.
- * Uses EIP-3009 transferWithAuthorization (USDC native, gasless for caller).
+ * Build a fetch wrapper that automatically handles the x402 402 → sign → retry
+ * flow using the official @x402/fetch + @x402/evm libraries. The signer is the
+ * agent's viem account (privateKeyToAccount) which exposes `address` and
+ * `signTypedData` — exactly what ExactEvmScheme needs to sign EIP-3009
+ * authorizations for USDC.
  */
-async function buildPaymentSignature(
-  runtime: IAgentRuntime,
-  payToAddress: Address,
-  priceUsdc: string
-): Promise<string> {
-  const { account, walletClient } = getConfig(runtime);
-
-  const value = parseUnits(priceUsdc, USDC_DECIMALS);
-  const validAfter = 0n;
-  const validBefore = BigInt(Math.floor(Date.now() / 1000) + 120); // 2 min
-  // Random nonce (bytes32)
-  const nonceBytes = crypto.getRandomValues(new Uint8Array(32));
-  const nonce = ("0x" +
-    Array.from(nonceBytes)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")) as Hex;
-
-  const sig = await walletClient.signTypedData({
-    account,
-    domain: USDC_DOMAIN,
-    types: TRANSFER_WITH_AUTH_TYPES,
-    primaryType: "TransferWithAuthorization",
-    message: {
-      from: account.address,
-      to: payToAddress,
-      value,
-      validAfter,
-      validBefore,
-      nonce,
-    },
-  });
-
-  const payload = {
-    x402Version: 2,
-    scheme: "exact",
-    network: "eip155:8453",
-    payload: {
-      signature: sig,
-      authorization: encodeAbiParameters(
-        parseAbiParameters(
-          "address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce"
-        ),
-        [
-          account.address,
-          payToAddress,
-          value,
-          validAfter,
-          validBefore,
-          nonce as Hex,
-        ]
-      ),
-    },
-  };
-
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
+function makePaidFetch(runtime: IAgentRuntime) {
+  const { account } = getConfig(runtime);
+  const client = new x402Client();
+  registerExactEvmScheme(client, { signer: account });
+  return wrapFetchWithPayment(fetch, client);
 }
 
 /**
  * Perform a paid GET request to a GBLIN x402 endpoint.
- * Handles the 402 → sign → retry flow automatically.
  */
 async function x402Get(
   runtime: IAgentRuntime,
@@ -172,54 +102,16 @@ async function x402Get(
 ): Promise<unknown> {
   const { baseUrl } = getConfig(runtime);
   const url = `${baseUrl}${path}`;
+  const paidFetch = makePaidFetch(runtime);
 
-  // Step 1: preflight to get payment requirements
-  const preflight = await fetch(url);
-  if (preflight.status !== 402) {
-    if (preflight.ok) return preflight.json();
+  const res = await paidFetch(url);
+  if (!res.ok) {
+    const body = await res.text();
     throw new Error(
-      `Unexpected status ${preflight.status} from ${url}`
+      `x402 request failed (${res.status}): ${body.slice(0, 200)}`
     );
   }
-
-  const prHeader = preflight.headers.get("PAYMENT-REQUIRED");
-  if (!prHeader) {
-    throw new Error("x402: missing PAYMENT-REQUIRED header on 402 response");
-  }
-
-  const pr = JSON.parse(Buffer.from(prHeader, "base64").toString("utf8"));
-  const accept = pr.accepts?.[0];
-  if (!accept) {
-    throw new Error("x402: no accepts[] in PAYMENT-REQUIRED payload");
-  }
-
-  const payTo = accept.payTo as Address;
-  // x402 v2: field is "price" (e.g. "$0.002") or legacy "amount" (micro-units)
-  const priceRaw = (accept.price ?? accept.amount) as string;
-  const priceUsdc = typeof priceRaw === "string" && priceRaw.startsWith("$")
-    ? priceRaw.slice(1)
-    : (Number(priceRaw) / 1e6).toFixed(6);
-
-  // Step 2: sign payment
-  const paymentSignature = await buildPaymentSignature(
-    runtime,
-    payTo,
-    priceUsdc
-  );
-
-  // Step 3: retry with payment
-  const paid = await fetch(url, {
-    headers: { "PAYMENT-SIGNATURE": paymentSignature },
-  });
-
-  if (!paid.ok) {
-    const body = await paid.text();
-    throw new Error(
-      `x402 payment rejected (${paid.status}): ${body.slice(0, 200)}`
-    );
-  }
-
-  return paid.json();
+  return res.json();
 }
 
 // ─── Action: CHECK_GBLIN_TREASURY_HEALTH ─────────────────────────────────────
