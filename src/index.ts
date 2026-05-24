@@ -194,8 +194,11 @@ async function x402Get(
   }
 
   const payTo = accept.payTo as Address;
-  const priceRaw = accept.amount as string; // micro-USDC units
-  const priceUsdc = (Number(priceRaw) / 1e6).toFixed(6);
+  // x402 v2: field is "price" (e.g. "$0.002") or legacy "amount" (micro-units)
+  const priceRaw = (accept.price ?? accept.amount) as string;
+  const priceUsdc = typeof priceRaw === "string" && priceRaw.startsWith("$")
+    ? priceRaw.slice(1)
+    : (Number(priceRaw) / 1e6).toFixed(6);
 
   // Step 2: sign payment
   const paymentSignature = await buildPaymentSignature(
