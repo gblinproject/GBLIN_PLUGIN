@@ -1,0 +1,9 @@
+{
+  "defaultRegistry": "elizaos-plugins/registry",
+  "publishConfig": {
+    "registry": "elizaos-plugins/registry",
+    "username": "gblinproject",
+    "useNpm": false,
+    "platform": "node"
+  }
+}

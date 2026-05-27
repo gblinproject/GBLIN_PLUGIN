@@ -55,11 +55,19 @@
     "viem": "^2.21.0"
   },
   "devDependencies": {
+    "@elizaos/cli": "^1.7.2",
     "@elizaos/core": "^1.0.0",
     "@types/node": "^20.14.0",
     "typescript": "^5.5.4"
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageType": "plugin",
+  "platform": "node",
+  "agentConfig": {
+    "pluginType": "elizaos:plugin:1.0.0",
+    "pluginParameters": {}
+  },
+  "npmPackage": "@gblin_protocol/plugin-gblin"
 }
