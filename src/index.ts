@@ -248,8 +248,9 @@ const investIdleUsdcAction: Action = {
   ],
   description:
     "Convert idle USDC into the GBLIN MEV-protected index (cbBTC/WETH/USDC). " +
-    "Fetches ready-to-broadcast calldata (approve + buyGBLINWithToken) from the " +
-    "GBLIN x402 API and executes both transactions sequentially on Base mainnet. " +
+    "Fetches ready-to-broadcast calldata (4 sequential steps: approve USDC, swap to WETH, approve WETH, buy GBLIN) " +
+    "from the GBLIN x402 API and executes all transactions sequentially on Base mainnet. " +
+    "Bypasses the broken exactInput path in the GBLIN contract using SwapRouter02. " +
     "Costs $0.002 USDC for the API call plus gas on Base.",
 
   validate: async (runtime: IAgentRuntime): Promise<boolean> => {
@@ -291,7 +292,7 @@ const investIdleUsdcAction: Action = {
 
       const data = (await x402Get(
         runtime,
-        `/api/x402/invest?usdc=${usdcAmount}`
+        `/api/x402/invest?usdc=${usdcAmount}&wallet=${account.address}`
       )) as {
         steps: Array<{
           step: number;
