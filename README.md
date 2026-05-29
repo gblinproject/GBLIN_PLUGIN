@@ -106,17 +106,21 @@ Agent LLM decides "I have idle USDC"
   ↓
 triggers INVEST_IDLE_USDC_GBLIN action
   ↓
-plugin sends GET /api/x402/invest?usdc=10 (preflight → 402)
+plugin sends GET /api/x402/invest?usdc=10&wallet=0x... (preflight → 402)
   ↓
 plugin signs EIP-3009 transferWithAuthorization ($0.002 USDC)
   ↓
 plugin retries with PAYMENT-SIGNATURE header
   ↓
-GBLIN API returns {steps: [{target, calldata}, {target, calldata}]}
+GBLIN API returns {steps: [{target, calldata} × 4]}
   ↓
-plugin broadcasts step 1 (USDC approve) → waits confirmation
+plugin broadcasts step 1 (approve USDC→SwapRouter02) → waits confirmation
   ↓
-plugin broadcasts step 2 (buyGBLINWithToken) → waits confirmation
+plugin broadcasts step 2 (swap USDC→WETH) → waits confirmation
+  ↓
+plugin broadcasts step 3 (approve WETH→GBLIN) → waits confirmation
+  ↓
+plugin broadcasts step 4 (buyGBLINWithToken) → waits confirmation
   ↓
 callback: "✅ Invested $10 USDC → GBLIN. tx: 0xab12..."
 ```
@@ -132,7 +136,7 @@ endpoint on Base mainnet (chain id 8453, USDC `0x8335...`).
 |---|---|---|
 | `GET /api/x402/treasury-state` | $0.001 | NAV, basket, Crash Shield |
 | `GET /api/x402/health?wallet=` | $0.002 | balances, gas runway, recommendation |
-| `GET /api/x402/invest?usdc=` | $0.002 | sequential tx calldata |
+| `GET /api/x402/invest?usdc=&wallet=` | $0.002 | 4-step calldata (SwapRouter02) |
 | `GET /api/x402/jit?usdc=&wallet=` | $0.005 | atomic swap calldata |
 
 Discovery manifest: [gblin.digital/api/x402/llms.txt](https://gblin.digital/api/x402/llms.txt)
