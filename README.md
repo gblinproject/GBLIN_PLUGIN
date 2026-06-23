@@ -11,7 +11,7 @@ all from inside your ElizaOS agent.
 [![Base](https://img.shields.io/badge/chain-Base%20mainnet-0052ff)](https://base.org)
 [![Base MCP Plugin](https://img.shields.io/badge/Base%20MCP-PR%20%2356-blue)](https://github.com/base/skills/pull/56)
 [![x402 Manifest](https://img.shields.io/badge/x402-manifest-green)](https://gblin.digital/.well-known/x402)
-[![Base Mainnet](https://img.shields.io/badge/Base-Mainnet%20Live-0052FF)](https://basescan.org/address/0x38DcDB3A381677239BBc652aed9811F2f8496345)
+[![Base Mainnet](https://img.shields.io/badge/Base-Mainnet%20Live-0052FF)](https://basescan.org/address/0x36C81d7E1966310F305eA637e761Cf77F90852f0)
 
 ---
 
@@ -148,7 +148,7 @@ Discovery manifest: [gblin.digital/api/x402/llms.txt](https://gblin.digital/api/
 
 ## Protocol
 
-- **Contract**: [`0x38DcDB3A381677239BBc652aed9811F2f8496345`](https://basescan.org/address/0x38DcDB3A381677239BBc652aed9811F2f8496345) (Base mainnet)
+- **Contract**: [`0x36C81d7E1966310F305eA637e761Cf77F90852f0`](https://basescan.org/address/0x36C81d7E1966310F305eA637e761Cf77F90852f0) (Base mainnet)
 - **Owner**: [48h Timelock](https://basescan.org/address/0x6aBeC8716fFeEcf7C3D6e68255b4797113E8e5Dd) — every parameter change takes 48 hours on-chain
 - **Basket**: 45% cbBTC + 45% WETH + 10% USDC (rebalances with on-chain Crash Shield)
 - **MCP Server**: [`@gblin-protocol/mcp-server`](https://www.npmjs.com/package/@gblin-protocol/mcp-server) — free alternative for Claude Desktop / Cursor
