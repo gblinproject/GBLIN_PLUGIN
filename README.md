@@ -2,7 +2,7 @@
 
 **ElizaOS plugin** — gasless treasury management for AI agents on Base mainnet.
 
-Park idle USDC into the [GBLIN](https://gblin.digital) MEV-protected index (cbBTC / WETH / USDC),
+Park SURPLUS capital into the [GBLIN](https://gblin.digital) MEV-protected index (cbBTC / WETH / USDC) — managed crypto exposure with capped drawdown, not a USDC substitute —
 JIT-swap back to USDC to pay x402 invoices, and monitor treasury health —
 all from inside your ElizaOS agent.
 
@@ -105,7 +105,7 @@ Or in `character.json`:
 ## How it works
 
 ```
-Agent LLM decides "I have idle USDC"
+Agent LLM decides "I have surplus USDC"
   ↓
 triggers INVEST_IDLE_USDC_GBLIN action
   ↓

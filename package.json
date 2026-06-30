@@ -1,7 +1,7 @@
 {
   "name": "plugin-gblin",
-  "version": "0.2.1",
-  "description": "ElizaOS plugin — gasless treasury rail for AI agents on Base mainnet. Routes idle USDC into the GBLIN MEV-protected cbBTC/WETH basket and JIT-swaps back to USDC for x402 invoices.",
+  "version": "0.2.2",
+  "description": "ElizaOS plugin — gasless treasury rail for AI agents on Base mainnet. Routes SURPLUS capital into the GBLIN MEV-protected cbBTC/WETH basket (managed crypto exposure, not a USDC substitute) and JIT-swaps back to USDC for x402 invoices.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -69,5 +69,5 @@
     "pluginType": "elizaos:plugin:1.0.0",
     "pluginParameters": {}
   },
-  "npmPackage": "@gblin_protocol/plugin-gblin"
+  "npmPackage": "plugin-gblin"
 }

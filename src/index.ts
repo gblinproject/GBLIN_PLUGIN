@@ -2,7 +2,7 @@
  * plugin-gblin — ElizaOS plugin for GBLIN Protocol
  *
  * Exposes three Actions and one Provider that let any ElizaOS agent:
- *   • Park idle USDC into the GBLIN MEV-protected cbBTC/WETH basket (invest)
+ *   • Park SURPLUS USDC into the GBLIN MEV-protected cbBTC/WETH basket (invest)
  *   • JIT-swap GBLIN back to USDC to pay x402 invoices in real-time (rescue)
  *   • Read treasury health to decide when to rebalance (health check)
  *
@@ -247,7 +247,7 @@ const investIdleUsdcAction: Action = {
     "ACCUMULATE_GBLIN",
   ],
   description:
-    "Convert idle USDC into the GBLIN MEV-protected index (cbBTC/WETH/USDC). " +
+    "Convert SURPLUS USDC into the GBLIN MEV-protected index (cbBTC/WETH/USDC) — managed exposure, not a USDC substitute. " +
     "Fetches ready-to-broadcast calldata (4 sequential steps: approve USDC, swap to WETH, approve WETH, buy GBLIN) " +
     "from the GBLIN x402 API and executes all transactions sequentially on Base mainnet. " +
     "Bypasses the broken exactInput path in the GBLIN contract using SwapRouter02. " +
@@ -373,12 +373,12 @@ const investIdleUsdcAction: Action = {
     [
       {
         name: "{{user}}",
-        content: { text: "I have idle USDC. Park it in GBLIN." },
+        content: { text: "I have surplus USDC. Park it in GBLIN." },
       },
       {
         name: "{{agent}}",
         content: {
-          text: "Converting your idle USDC into GBLIN for MEV-protected treasury management.",
+          text: "Converting your surplus USDC into GBLIN for MEV-protected treasury management.",
           actions: ["INVEST_IDLE_USDC_GBLIN"],
         },
       },
@@ -623,7 +623,7 @@ export const gblinPlugin: Plugin = {
   name: "plugin-gblin",
   description:
     "GBLIN Protocol treasury management for ElizaOS agents. " +
-    "Park idle USDC in a MEV-protected cbBTC/WETH index, JIT-swap back to USDC " +
+    "Park surplus USDC in a MEV-protected cbBTC/WETH index, JIT-swap back to USDC " +
     "for x402 payments, and monitor treasury health — all on Base mainnet.",
   actions: [
     checkTreasuryHealthAction,
