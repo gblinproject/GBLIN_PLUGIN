@@ -22,6 +22,7 @@ all from inside your ElizaOS agent.
 | `CHECK_GBLIN_TREASURY_HEALTH` | "check my treasury", "wallet status" | $0.002 USDC |
 | `INVEST_IDLE_USDC_GBLIN` | "park USDC in GBLIN", "buy GBLIN", "invest 10 USDC" | $0.002 USDC |
 | `RESCUE_USDC_FROM_GBLIN` | "need USDC", "sell GBLIN", "JIT swap", "pay invoice" | $0.005 USDC |
+| `GET_GBLIN_RISK_ATTESTATION` | "get a risk attestation", "prove you checked risk", "risk receipt" | $0.003 USDC |
 
 The **Provider** (`GBLIN_TREASURY_CONTEXT`) injects live NAV, basket weights, and
 Crash Shield status into every agent loop ($0.001 USDC per call).

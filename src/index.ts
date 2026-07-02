@@ -1,10 +1,11 @@
 /**
  * plugin-gblin — ElizaOS plugin for GBLIN Protocol
  *
- * Exposes three Actions and one Provider that let any ElizaOS agent:
+ * Exposes four Actions and one Provider that let any ElizaOS agent:
  *   • Park SURPLUS USDC into the GBLIN MEV-protected cbBTC/WETH basket (invest)
  *   • JIT-swap GBLIN back to USDC to pay x402 invoices in real-time (rescue)
  *   • Read treasury health to decide when to rebalance (health check)
+ *   • Mint a perishable, EIP-712-signed Risk Attestation as proof-of-diligence
  *
  * All on-chain calls go through the GBLIN x402 API on Base mainnet.
  * Payments to the API ($0.001–$0.005 USDC) use EIP-3009 transferWithAuthorization
@@ -541,6 +542,136 @@ const rescueUsdcAction: Action = {
   ],
 };
 
+// ─── Action: GET_GBLIN_RISK_ATTESTATION ──────────────────────────────────────
+
+const getRiskAttestationAction: Action = {
+  name: "GET_GBLIN_RISK_ATTESTATION",
+  similes: [
+    "MINT_RISK_ATTESTATION",
+    "RISK_PROOF",
+    "RISK_RECEIPT",
+    "PROVE_MARKET_CHECK",
+    "GET_RISK_REGIME_PROOF",
+  ],
+  description:
+    "Mint a GBLIN Risk Attestation: a perishable (10-minute), EIP-712-signed, " +
+    "verifiable proof of the current BTC/ETH risk regime (calm | elevated | crash) " +
+    "derived from the on-chain Crash Shield on Base. Attach it to any action as " +
+    "proof the agent checked market risk first; any counterparty verifies it for " +
+    "free with the verify_risk_attestation tool in @gblin-protocol/mcp-server. " +
+    "Costs $0.003 USDC on Base mainnet via x402.",
+
+  validate: async (runtime: IAgentRuntime): Promise<boolean> => {
+    const key = String(runtime.getSetting("EVM_PRIVATE_KEY") ?? "");
+    if (!key || !key.startsWith("0x") || key.length !== 66) {
+      logger.warn(
+        "[plugin-gblin] GET_GBLIN_RISK_ATTESTATION: EVM_PRIVATE_KEY missing or invalid"
+      );
+      return false;
+    }
+    return true;
+  },
+
+  handler: async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    _state?: State,
+    _options?: Record<string, unknown>,
+    callback?: HandlerCallback
+  ): Promise<ActionResult> => {
+    try {
+      logger.info("[plugin-gblin] Minting GBLIN Risk Attestation");
+
+      const data = (await x402Get(
+        runtime,
+        "/api/x402/attestation"
+      )) as {
+        attestation: {
+          regime: string;
+          severity_pct: number;
+          defensive_cash_pct: number;
+          shield_active: boolean;
+          block_number: number;
+          expires_at: number;
+          ttl_seconds: number;
+        };
+        attestation_id: string;
+        signature: string | null;
+        attestor: string | null;
+        signed: boolean;
+      };
+
+      const a = data.attestation;
+      const expiresIso = new Date(a.expires_at * 1000).toISOString();
+      const regimeEmoji =
+        a.regime === "crash" ? "🔴" : a.regime === "elevated" ? "🟡" : "🟢";
+
+      const summary =
+        `🧾 **GBLIN Risk Attestation minted**\n\n` +
+        `**Regime:** ${regimeEmoji} ${a.regime.toUpperCase()} ` +
+        `(severity ${a.severity_pct}%, defensive cash ${a.defensive_cash_pct}%)\n` +
+        `**Crash Shield:** ${a.shield_active ? "ACTIVE" : "inactive"}\n` +
+        `**Block:** ${a.block_number} | **Expires:** ${expiresIso} ` +
+        `(${a.ttl_seconds}s TTL)\n` +
+        `**ID:** \`${data.attestation_id}\`\n` +
+        `**Signed:** ${data.signed ? `yes (attestor ${data.attestor})` : "no"}\n\n` +
+        `Attach the full attestation object to your next action as ` +
+        `proof-of-diligence. Anyone verifies it free via ` +
+        `\`verify_risk_attestation\` in @gblin-protocol/mcp-server.`;
+
+      if (callback) {
+        await callback({
+          text: summary,
+          actions: ["GET_GBLIN_RISK_ATTESTATION"],
+          source: message.content?.source,
+        });
+      }
+
+      return {
+        success: true,
+        text: summary,
+        data,
+      };
+    } catch (error) {
+      const msg = `Failed to mint Risk Attestation: ${(error as Error).message}`;
+      logger.error(`[plugin-gblin] ${msg}`);
+      if (callback) {
+        await callback({ text: `❌ ${msg}`, source: message.content?.source });
+      }
+      return { success: false, text: msg };
+    }
+  },
+
+  examples: [
+    [
+      {
+        name: "{{user}}",
+        content: { text: "Get a risk attestation before we move any capital" },
+      },
+      {
+        name: "{{agent}}",
+        content: {
+          text: "Minting a signed GBLIN Risk Attestation as proof-of-diligence...",
+          actions: ["GET_GBLIN_RISK_ATTESTATION"],
+        },
+      },
+    ],
+    [
+      {
+        name: "{{user}}",
+        content: { text: "Prove that you checked market risk first" },
+      },
+      {
+        name: "{{agent}}",
+        content: {
+          text: "I'll mint a 10-minute EIP-712 risk proof from the on-chain Crash Shield.",
+          actions: ["GET_GBLIN_RISK_ATTESTATION"],
+        },
+      },
+    ],
+  ],
+};
+
 // ─── Provider: GBLIN_TREASURY_CONTEXT ────────────────────────────────────────
 
 const gblinTreasuryProvider: Provider = {
@@ -629,6 +760,7 @@ export const gblinPlugin: Plugin = {
     checkTreasuryHealthAction,
     investIdleUsdcAction,
     rescueUsdcAction,
+    getRiskAttestationAction,
   ],
   providers: [gblinTreasuryProvider],
 };
@@ -639,5 +771,6 @@ export {
   checkTreasuryHealthAction,
   investIdleUsdcAction,
   rescueUsdcAction,
+  getRiskAttestationAction,
   gblinTreasuryProvider,
 };
